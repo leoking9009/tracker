@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>습관 트래커 & 가계부</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .app-wrapper {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .habit-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .habit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .habit-name {
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        .habit-checkbox {
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+
+        .weight-input-container {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .weight-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .meditation-container {
+            margin-top: 15px;
+        }
+
+        .meditation-item {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: move;
+            border: 2px solid #e0e0e0;
+            transition: all 0.2s;
+        }
+
+        .meditation-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .meditation-item.dragging {
+            opacity: 0.5;
+        }
+
+        .drag-handle {
+            color: #999;
+            font-size: 1.5em;
+            cursor: grab;
+        }
+
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+
+        .meditation-text {
+            flex: 1;
+            color: #333;
+        }
+
+        .delete-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .delete-btn:hover {
+            background: #e63946;
+        }
+
+        .meditation-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .meditation-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .expense-input-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .expense-input {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .expense-list {
+            margin-top: 20px;
+        }
+
+        .expense-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 5px solid #667eea;
+        }
+
+        .expense-info {
+            flex: 1;
+        }
+
+        .expense-date {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .expense-description {
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .expense-amount {
+            font-size: 1.2em;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .expense-amount.income {
+            color: #2ecc71;
+        }
+
+        .expense-amount.expense {
+            color: #e74c3c;
+        }
+
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .summary-item {
+            text-align: center;
+        }
+
+        .summary-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        .summary-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .date-display {
+            text-align: center;
+            color: white;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .streak {
+            display: inline-block;
+            background: #ffc107;
+            color: #333;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-left: 10px;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .app-wrapper {
+                grid-template-columns: 1fr;
+            }
+
+            .summary {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 나의 일상 트래커</h1>
+
+        <div class="date-display" id="dateDisplay"></div>
+
+        <div class="app-wrapper">
+            <!-- 습관 트래커 섹션 -->
+            <div class="section">
+                <h2>✅ 습관 트래커</h2>
+
+                <!-- 자전거 30분 -->
+                <div class="habit-item">
+                    <div class="habit-header">
+                        <span class="habit-name">🚴 자전거 30분</span>
+                        <div>
+                            <span class="streak" id="bikeStreak">연속 0일</span>
+                            <input type="checkbox" class="habit-checkbox" id="bikeCheck">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 루틴 명상 -->
+                <div class="habit-item">
+                    <div class="habit-header">
+                        <span class="habit-name">🧘 루틴 명상</span>
+                        <div>
+                            <span class="streak" id="meditationStreak">연속 0일</span>
+                            <input type="checkbox" class="habit-checkbox" id="meditationCheck">
+                        </div>
+                    </div>
+
+                    <div class="meditation-container">
+                        <div class="meditation-input-container">
+                            <input type="text" class="meditation-input" id="meditationInput" placeholder="명상 내용을 입력하세요...">
+                            <button class="btn" onclick="addMeditation()">추가</button>
+                        </div>
+                        <div id="meditationList"></div>
+                    </div>
+                </div>
+
+                <!-- 몸무게 기록 -->
+                <div class="habit-item">
+                    <div class="habit-header">
+                        <span class="habit-name">⚖️ 몸무게</span>
+                    </div>
+                    <div class="weight-input-container">
+                        <input type="number" step="0.1" class="weight-input" id="weightInput" placeholder="몸무게를 입력하세요 (kg)">
+                        <button class="btn" onclick="addWeight()">기록</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 가계부 섹션 -->
+            <div class="section">
+                <h2>💰 간단한 가계부</h2>
+
+                <div class="summary">
+                    <div class="summary-item">
+                        <div class="summary-label">총 수입</div>
+                        <div class="summary-value" id="totalIncome">0원</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">총 지출</div>
+                        <div class="summary-value" id="totalExpense">0원</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-label">잔액</div>
+                        <div class="summary-value" id="balance">0원</div>
+                    </div>
+                </div>
+
+                <div class="expense-input-container">
+                    <input type="text" class="expense-input" id="expenseDescription" placeholder="내용">
+                    <input type="number" class="expense-input" id="expenseAmount" placeholder="금액">
+                    <button class="btn" onclick="addExpense('income')">수입</button>
+                    <button class="btn" onclick="addExpense('expense')" style="background: #e74c3c;">지출</button>
+                </div>
+
+                <div class="expense-list" id="expenseList"></div>
+            </div>
+        </div>
+
+        <!-- 몸무게 그래프 -->
+        <div class="section chart-container">
+            <h2>📈 몸무게 추이</h2>
+            <canvas id="weightChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // 데이터 저장소
+        let habits = {
+            bike: { checked: false, streak: 0, lastDate: null },
+            meditation: { checked: false, streak: 0, lastDate: null }
+        };
+        let meditationList = [];
+        let weightData = [];
+        let expenses = [];
+
+        // 로컬 스토리지에서 데이터 불러오기
+        function loadData() {
+            const savedHabits = localStorage.getItem('habits');
+            const savedMeditation = localStorage.getItem('meditationList');
+            const savedWeight = localStorage.getItem('weightData');
+            const savedExpenses = localStorage.getItem('expenses');
+
+            if (savedHabits) habits = JSON.parse(savedHabits);
+            if (savedMeditation) meditationList = JSON.parse(savedMeditation);
+            if (savedWeight) weightData = JSON.parse(savedWeight);
+            if (savedExpenses) expenses = JSON.parse(savedExpenses);
+
+            checkAndResetDaily();
+            updateUI();
+        }
+
+        // 데이터 저장
+        function saveData() {
+            localStorage.setItem('habits', JSON.stringify(habits));
+            localStorage.setItem('meditationList', JSON.stringify(meditationList));
+            localStorage.setItem('weightData', JSON.stringify(weightData));
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+        }
+
+        // 날짜 변경 시 체크박스 초기화
+        function checkAndResetDaily() {
+            const today = new Date().toDateString();
+
+            Object.keys(habits).forEach(key => {
+                if (habits[key].lastDate !== today) {
+                    if (habits[key].checked && habits[key].lastDate) {
+                        // 어제 체크했다면 스트릭 증가
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        if (habits[key].lastDate === yesterday.toDateString()) {
+                            habits[key].streak++;
+                        } else {
+                            habits[key].streak = 0;
+                        }
+                    }
+                    habits[key].checked = false;
+                }
+            });
+        }
+
+        // UI 업데이트
+        function updateUI() {
+            // 날짜 표시
+            const today = new Date();
+            document.getElementById('dateDisplay').textContent =
+                `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일 ${['일', '월', '화', '수', '목', '금', '토'][today.getDay()]}요일`;
+
+            // 습관 체크박스
+            document.getElementById('bikeCheck').checked = habits.bike.checked;
+            document.getElementById('meditationCheck').checked = habits.meditation.checked;
+
+            // 스트릭 표시
+            document.getElementById('bikeStreak').textContent = `연속 ${habits.bike.streak}일`;
+            document.getElementById('meditationStreak').textContent = `연속 ${habits.meditation.streak}일`;
+
+            // 명상 리스트
+            renderMeditationList();
+
+            // 가계부
+            renderExpenses();
+            updateSummary();
+
+            // 몸무게 차트
+            renderWeightChart();
+        }
+
+        // 습관 체크박스 이벤트
+        document.getElementById('bikeCheck').addEventListener('change', function() {
+            habits.bike.checked = this.checked;
+            habits.bike.lastDate = new Date().toDateString();
+            if (this.checked) {
+                habits.bike.streak++;
+            }
+            saveData();
+            updateUI();
+        });
+
+        document.getElementById('meditationCheck').addEventListener('change', function() {
+            habits.meditation.checked = this.checked;
+            habits.meditation.lastDate = new Date().toDateString();
+            if (this.checked) {
+                habits.meditation.streak++;
+            }
+            saveData();
+            updateUI();
+        });
+
+        // 명상 내용 추가
+        function addMeditation() {
+            const input = document.getElementById('meditationInput');
+            const text = input.value.trim();
+
+            if (text) {
+                meditationList.push({
+                    id: Date.now(),
+                    text: text
+                });
+                input.value = '';
+                saveData();
+                updateUI();
+            }
+        }
+
+        // 명상 리스트 렌더링
+        function renderMeditationList() {
+            const container = document.getElementById('meditationList');
+            container.innerHTML = meditationList.map((item, index) => `
+                <div class="meditation-item" draggable="true" data-id="${item.id}">
+                    <span class="drag-handle">☰</span>
+                    <span class="meditation-text">${item.text}</span>
+                    <button class="delete-btn" onclick="deleteMeditation(${item.id})">삭제</button>
+                </div>
+            `).join('');
+
+            // 드래그 앤 드롭 이벤트 추가
+            addDragAndDrop();
+        }
+
+        // 명상 삭제
+        function deleteMeditation(id) {
+            meditationList = meditationList.filter(item => item.id !== id);
+            saveData();
+            updateUI();
+        }
+
+        // 드래그 앤 드롭 기능
+        function addDragAndDrop() {
+            const items = document.querySelectorAll('.meditation-item');
+            let draggedItem = null;
+
+            items.forEach(item => {
+                item.addEventListener('dragstart', function() {
+                    draggedItem = this;
+                    this.classList.add('dragging');
+                });
+
+                item.addEventListener('dragend', function() {
+                    this.classList.remove('dragging');
+                });
+
+                item.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                    const afterElement = getDragAfterElement(this.parentElement, e.clientY);
+                    if (afterElement == null) {
+                        this.parentElement.appendChild(draggedItem);
+                    } else {
+                        this.parentElement.insertBefore(draggedItem, afterElement);
+                    }
+                });
+
+                item.addEventListener('drop', function() {
+                    const newOrder = [];
+                    document.querySelectorAll('.meditation-item').forEach(el => {
+                        const id = parseInt(el.dataset.id);
+                        const item = meditationList.find(m => m.id === id);
+                        if (item) newOrder.push(item);
+                    });
+                    meditationList = newOrder;
+                    saveData();
+                });
+            });
+        }
+
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.meditation-item:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // 몸무게 추가
+        function addWeight() {
+            const input = document.getElementById('weightInput');
+            const weight = parseFloat(input.value);
+
+            if (weight && weight > 0) {
+                const today = new Date().toISOString().split('T')[0];
+
+                // 오늘 날짜 데이터가 있으면 업데이트, 없으면 추가
+                const existingIndex = weightData.findIndex(item => item.date === today);
+                if (existingIndex >= 0) {
+                    weightData[existingIndex].weight = weight;
+                } else {
+                    weightData.push({ date: today, weight: weight });
+                }
+
+                // 날짜순 정렬
+                weightData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                input.value = '';
+                saveData();
+                updateUI();
+            }
+        }
+
+        // 몸무게 차트
+        let weightChart = null;
+        function renderWeightChart() {
+            const ctx = document.getElementById('weightChart').getContext('2d');
+
+            if (weightChart) {
+                weightChart.destroy();
+            }
+
+            const labels = weightData.map(item => {
+                const date = new Date(item.date);
+                return `${date.getMonth() + 1}/${date.getDate()}`;
+            });
+            const data = weightData.map(item => item.weight);
+
+            weightChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '몸무게 (kg)',
+                        data: data,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: true
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + 'kg';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 가계부 - 수입/지출 추가
+        function addExpense(type) {
+            const description = document.getElementById('expenseDescription').value.trim();
+            const amount = parseFloat(document.getElementById('expenseAmount').value);
+
+            if (description && amount && amount > 0) {
+                expenses.unshift({
+                    id: Date.now(),
+                    date: new Date().toISOString(),
+                    description: description,
+                    amount: amount,
+                    type: type
+                });
+
+                document.getElementById('expenseDescription').value = '';
+                document.getElementById('expenseAmount').value = '';
+
+                saveData();
+                updateUI();
+            }
+        }
+
+        // 가계부 렌더링
+        function renderExpenses() {
+            const container = document.getElementById('expenseList');
+            container.innerHTML = expenses.map(item => {
+                const date = new Date(item.date);
+                const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+                return `
+                    <div class="expense-item">
+                        <div class="expense-info">
+                            <div class="expense-date">${dateStr}</div>
+                            <div class="expense-description">${item.description}</div>
+                        </div>
+                        <div>
+                            <div class="expense-amount ${item.type}">
+                                ${item.type === 'income' ? '+' : '-'}${item.amount.toLocaleString()}원
+                            </div>
+                            <button class="delete-btn" onclick="deleteExpense(${item.id})">삭제</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 가계부 삭제
+        function deleteExpense(id) {
+            expenses = expenses.filter(item => item.id !== id);
+            saveData();
+            updateUI();
+        }
+
+        // 가계부 요약 업데이트
+        function updateSummary() {
+            const income = expenses
+                .filter(item => item.type === 'income')
+                .reduce((sum, item) => sum + item.amount, 0);
+
+            const expense = expenses
+                .filter(item => item.type === 'expense')
+                .reduce((sum, item) => sum + item.amount, 0);
+
+            const balance = income - expense;
+
+            document.getElementById('totalIncome').textContent = income.toLocaleString() + '원';
+            document.getElementById('totalExpense').textContent = expense.toLocaleString() + '원';
+            document.getElementById('balance').textContent = balance.toLocaleString() + '원';
+        }
+
+        // Enter 키 이벤트
+        document.getElementById('meditationInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addMeditation();
+        });
+
+        document.getElementById('weightInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addWeight();
+        });
+
+        document.getElementById('expenseAmount').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') addExpense('expense');
+        });
+
+        // 초기 로드
+        loadData();
+    </script>
+</body>
+</html>
