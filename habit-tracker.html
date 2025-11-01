@@ -524,8 +524,10 @@
             });
         });
 
-        // API 기본 URL
-        const API_URL = 'http://localhost:3000/api';
+        // API 기본 URL - 프로덕션과 로컬 환경 자동 감지
+        const API_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000/api'
+            : '/api';
 
         // 데이터 저장소
         let habits = {
@@ -684,7 +686,7 @@
         // 명상 삭제
         async function deleteMeditation(id) {
             try {
-                await fetch(`${API_URL}/meditation/${id}`, {
+                await fetch(`${API_URL}/meditation-delete?id=${id}`, {
                     method: 'DELETE'
                 });
                 meditationList = meditationList.filter(item => item.id !== id);
@@ -730,7 +732,7 @@
 
                     // 노션에 순서 업데이트
                     try {
-                        await fetch(`${API_URL}/meditation/reorder`, {
+                        await fetch(`${API_URL}/meditation-reorder`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ items: meditationList })
@@ -902,7 +904,7 @@
         // 가계부 삭제
         async function deleteExpense(id) {
             try {
-                await fetch(`${API_URL}/expenses/${id}`, {
+                await fetch(`${API_URL}/expenses-delete?id=${id}`, {
                     method: 'DELETE'
                 });
                 expenses = expenses.filter(item => item.id !== id);
