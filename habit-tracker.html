@@ -19,6 +19,83 @@
             padding: 20px;
         }
 
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .login-container h2 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .login-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+
+        .login-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-btn {
+            width: 100%;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        .login-btn:hover {
+            background: #5568d3;
+        }
+
+        .error-message {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .main-app {
+            display: none;
+        }
+
+        .logout-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.3);
+            color: white;
+            border: 2px solid white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
@@ -303,13 +380,25 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>📊 나의 일상 트래커</h1>
+    <!-- 로그인 화면 -->
+    <div class="login-container" id="loginContainer">
+        <h2>🔐 로그인</h2>
+        <input type="password" class="login-input" id="passwordInput" placeholder="비밀번호를 입력하세요">
+        <button class="login-btn" onclick="login()">로그인</button>
+        <div class="error-message" id="errorMessage">비밀번호가 올바르지 않습니다.</div>
+    </div>
 
-        <div class="date-display" id="dateDisplay"></div>
+    <!-- 메인 앱 -->
+    <div class="main-app" id="mainApp">
+        <button class="logout-btn" onclick="logout()">로그아웃</button>
 
-        <div class="app-wrapper">
-            <!-- 습관 트래커 섹션 -->
+        <div class="container">
+            <h1>📊 나의 일상 트래커</h1>
+
+            <div class="date-display" id="dateDisplay"></div>
+
+            <div class="app-wrapper">
+                <!-- 습관 트래커 섹션 -->
             <div class="section">
                 <h2>✅ 습관 트래커</h2>
 
@@ -393,6 +482,51 @@
     </div>
 
     <script>
+        // 비밀번호 설정 (원하는 비밀번호로 변경하세요)
+        const PASSWORD = 'tracker2024';
+
+        // 로그인 확인
+        function checkAuth() {
+            const isLoggedIn = sessionStorage.getItem('isLoggedIn');
+            if (isLoggedIn === 'true') {
+                document.getElementById('loginContainer').style.display = 'none';
+                document.getElementById('mainApp').style.display = 'block';
+                loadData();
+            } else {
+                document.getElementById('loginContainer').style.display = 'block';
+                document.getElementById('mainApp').style.display = 'none';
+            }
+        }
+
+        // 로그인
+        function login() {
+            const inputPassword = document.getElementById('passwordInput').value;
+            if (inputPassword === PASSWORD) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                document.getElementById('errorMessage').style.display = 'none';
+                checkAuth();
+            } else {
+                document.getElementById('errorMessage').style.display = 'block';
+            }
+        }
+
+        // 로그아웃
+        function logout() {
+            sessionStorage.removeItem('isLoggedIn');
+            document.getElementById('passwordInput').value = '';
+            checkAuth();
+        }
+
+        // Enter 키로 로그인
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('passwordInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') login();
+            });
+        });
+
+        // API 기본 URL
+        const API_URL = 'http://localhost:3000/api';
+
         // 데이터 저장소
         let habits = {
             bike: { checked: false, streak: 0, lastDate: null },
@@ -402,28 +536,44 @@
         let weightData = [];
         let expenses = [];
 
-        // 로컬 스토리지에서 데이터 불러오기
-        function loadData() {
-            const savedHabits = localStorage.getItem('habits');
-            const savedMeditation = localStorage.getItem('meditationList');
-            const savedWeight = localStorage.getItem('weightData');
-            const savedExpenses = localStorage.getItem('expenses');
+        // 노션에서 데이터 불러오기
+        async function loadData() {
+            try {
+                // 습관 데이터 로드
+                const habitsRes = await fetch(`${API_URL}/habits`);
+                habits = await habitsRes.json();
 
-            if (savedHabits) habits = JSON.parse(savedHabits);
-            if (savedMeditation) meditationList = JSON.parse(savedMeditation);
-            if (savedWeight) weightData = JSON.parse(savedWeight);
-            if (savedExpenses) expenses = JSON.parse(savedExpenses);
+                // 명상 리스트 로드
+                const meditationRes = await fetch(`${API_URL}/meditation`);
+                meditationList = await meditationRes.json();
 
-            checkAndResetDaily();
-            updateUI();
+                // 몸무게 데이터 로드
+                const weightRes = await fetch(`${API_URL}/weight`);
+                weightData = await weightRes.json();
+
+                // 가계부 데이터 로드
+                const expensesRes = await fetch(`${API_URL}/expenses`);
+                expenses = await expensesRes.json();
+
+                checkAndResetDaily();
+                updateUI();
+            } catch (error) {
+                console.error('데이터 로드 오류:', error);
+                alert('데이터를 불러오는 중 오류가 발생했습니다. 서버가 실행 중인지 확인해주세요.');
+            }
         }
 
-        // 데이터 저장
-        function saveData() {
-            localStorage.setItem('habits', JSON.stringify(habits));
-            localStorage.setItem('meditationList', JSON.stringify(meditationList));
-            localStorage.setItem('weightData', JSON.stringify(weightData));
-            localStorage.setItem('expenses', JSON.stringify(expenses));
+        // 노션에 데이터 저장
+        async function saveHabits() {
+            try {
+                await fetch(`${API_URL}/habits`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ habits })
+                });
+            } catch (error) {
+                console.error('습관 저장 오류:', error);
+            }
         }
 
         // 날짜 변경 시 체크박스 초기화
@@ -480,7 +630,7 @@
             if (this.checked) {
                 habits.bike.streak++;
             }
-            saveData();
+            saveHabits();
             updateUI();
         });
 
@@ -490,23 +640,29 @@
             if (this.checked) {
                 habits.meditation.streak++;
             }
-            saveData();
+            saveHabits();
             updateUI();
         });
 
         // 명상 내용 추가
-        function addMeditation() {
+        async function addMeditation() {
             const input = document.getElementById('meditationInput');
             const text = input.value.trim();
 
             if (text) {
-                meditationList.push({
-                    id: Date.now(),
-                    text: text
-                });
-                input.value = '';
-                saveData();
-                updateUI();
+                try {
+                    const response = await fetch(`${API_URL}/meditation`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text, order: meditationList.length })
+                    });
+                    const newItem = await response.json();
+                    meditationList.push(newItem);
+                    input.value = '';
+                    updateUI();
+                } catch (error) {
+                    console.error('명상 추가 오류:', error);
+                }
             }
         }
 
@@ -526,10 +682,16 @@
         }
 
         // 명상 삭제
-        function deleteMeditation(id) {
-            meditationList = meditationList.filter(item => item.id !== id);
-            saveData();
-            updateUI();
+        async function deleteMeditation(id) {
+            try {
+                await fetch(`${API_URL}/meditation/${id}`, {
+                    method: 'DELETE'
+                });
+                meditationList = meditationList.filter(item => item.id !== id);
+                updateUI();
+            } catch (error) {
+                console.error('명상 삭제 오류:', error);
+            }
         }
 
         // 드래그 앤 드롭 기능
@@ -557,15 +719,25 @@
                     }
                 });
 
-                item.addEventListener('drop', function() {
+                item.addEventListener('drop', async function() {
                     const newOrder = [];
                     document.querySelectorAll('.meditation-item').forEach(el => {
-                        const id = parseInt(el.dataset.id);
+                        const id = el.dataset.id;
                         const item = meditationList.find(m => m.id === id);
                         if (item) newOrder.push(item);
                     });
                     meditationList = newOrder;
-                    saveData();
+
+                    // 노션에 순서 업데이트
+                    try {
+                        await fetch(`${API_URL}/meditation/reorder`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ items: meditationList })
+                        });
+                    } catch (error) {
+                        console.error('순서 업데이트 오류:', error);
+                    }
                 });
             });
         }
@@ -586,27 +758,37 @@
         }
 
         // 몸무게 추가
-        function addWeight() {
+        async function addWeight() {
             const input = document.getElementById('weightInput');
             const weight = parseFloat(input.value);
 
             if (weight && weight > 0) {
                 const today = new Date().toISOString().split('T')[0];
 
-                // 오늘 날짜 데이터가 있으면 업데이트, 없으면 추가
-                const existingIndex = weightData.findIndex(item => item.date === today);
-                if (existingIndex >= 0) {
-                    weightData[existingIndex].weight = weight;
-                } else {
-                    weightData.push({ date: today, weight: weight });
+                try {
+                    const response = await fetch(`${API_URL}/weight`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date: today, weight })
+                    });
+                    const newData = await response.json();
+
+                    // 오늘 날짜 데이터가 있으면 업데이트, 없으면 추가
+                    const existingIndex = weightData.findIndex(item => item.date === today);
+                    if (existingIndex >= 0) {
+                        weightData[existingIndex] = newData;
+                    } else {
+                        weightData.push(newData);
+                    }
+
+                    // 날짜순 정렬
+                    weightData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+                    input.value = '';
+                    updateUI();
+                } catch (error) {
+                    console.error('몸무게 추가 오류:', error);
                 }
-
-                // 날짜순 정렬
-                weightData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-                input.value = '';
-                saveData();
-                updateUI();
             }
         }
 
@@ -664,24 +846,32 @@
         }
 
         // 가계부 - 수입/지출 추가
-        function addExpense(type) {
+        async function addExpense(type) {
             const description = document.getElementById('expenseDescription').value.trim();
             const amount = parseFloat(document.getElementById('expenseAmount').value);
 
             if (description && amount && amount > 0) {
-                expenses.unshift({
-                    id: Date.now(),
-                    date: new Date().toISOString(),
-                    description: description,
-                    amount: amount,
-                    type: type
-                });
+                try {
+                    const response = await fetch(`${API_URL}/expenses`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            date: new Date().toISOString(),
+                            description,
+                            amount,
+                            type
+                        })
+                    });
+                    const newExpense = await response.json();
+                    expenses.unshift(newExpense);
 
-                document.getElementById('expenseDescription').value = '';
-                document.getElementById('expenseAmount').value = '';
+                    document.getElementById('expenseDescription').value = '';
+                    document.getElementById('expenseAmount').value = '';
 
-                saveData();
-                updateUI();
+                    updateUI();
+                } catch (error) {
+                    console.error('가계부 추가 오류:', error);
+                }
             }
         }
 
@@ -710,10 +900,16 @@
         }
 
         // 가계부 삭제
-        function deleteExpense(id) {
-            expenses = expenses.filter(item => item.id !== id);
-            saveData();
-            updateUI();
+        async function deleteExpense(id) {
+            try {
+                await fetch(`${API_URL}/expenses/${id}`, {
+                    method: 'DELETE'
+                });
+                expenses = expenses.filter(item => item.id !== id);
+                updateUI();
+            } catch (error) {
+                console.error('가계부 삭제 오류:', error);
+            }
         }
 
         // 가계부 요약 업데이트
@@ -734,20 +930,22 @@
         }
 
         // Enter 키 이벤트
-        document.getElementById('meditationInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addMeditation();
-        });
+        window.addEventListener('load', function() {
+            document.getElementById('meditationInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addMeditation();
+            });
 
-        document.getElementById('weightInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addWeight();
-        });
+            document.getElementById('weightInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addWeight();
+            });
 
-        document.getElementById('expenseAmount').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') addExpense('expense');
+            document.getElementById('expenseAmount').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') addExpense('expense');
+            });
         });
 
         // 초기 로드
-        loadData();
+        checkAuth();
     </script>
 </body>
 </html>
